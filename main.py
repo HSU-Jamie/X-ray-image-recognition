@@ -1,3 +1,14 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:dc98fd08ae48ba9b9e75fc3ec6d3ec2c9ce9441cf495bae5f84fd5d77c895964
-size 485
+import Function
+import time
+
+if __name__ == '__main__':
+    START = time.time()
+    config = Function.Config()
+    config.load_config()
+    camera0, camera1 = Function.open_camera(config.capture0, config.capture1)
+    camera0, camera1 = Function.set_window(camera0, camera1, config.showpic, config.video_col, config.video_row)
+    Function.start_work(config, camera0, camera1)
+    print('finish\n')
+    END = time.time()
+    print('total time {} sec'.format(END-START))
+

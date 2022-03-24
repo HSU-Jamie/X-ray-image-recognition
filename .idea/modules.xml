@@ -1,3 +1,8 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:38000fd369bbf6eab4d9c643c059f2d997c7f9d9078484110666150ae16cc94b
-size 269
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/frame.iml" filepath="$PROJECT_DIR$/.idea/frame.iml" />
+    </modules>
+  </component>
+</project>
