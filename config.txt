@@ -1,14 +1,3 @@
-capture0 = 1_RTOL.mp4
-capture1 = 1_RTOL.mp4
-folder_path=D:\input
-LtoR = 1
-duration = 10
-xraytype = 0
-bottom_limit = 945
-thr_line= 960
-showpic=1
-video_col=1920
-video_row=1080
-maxVal_thr=0.95
-min_dist = 300
-capture_min_time = 0
+version https://git-lfs.github.com/spec/v1
+oid sha256:24de1f5ab8088ae3e2dc61d9a249949b4c857ef2ba87d8256e7c4979152c4ab7
+size 240
