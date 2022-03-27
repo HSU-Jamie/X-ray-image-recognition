@@ -1,3 +1,14 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:2c8cebb8184b09c5917e7bae5962050e41678413c80520eab3b8dd889dedf8e2
-size 240
+capture0 = 1_RTOL.mp4
+capture1 = 1_RTOL.mp4
+folder_path=D:\input
+LtoR = 0
+duration = 10
+xraytype = 1
+bottom_limit = 945
+thr_line= 960
+showpic=1
+video_col=1920
+video_row=1080
+maxVal_thr=0.95
+min_dist = 300
+capture_min_time = 0
