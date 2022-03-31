@@ -97,12 +97,11 @@ def get_accument(binary, thr_line, mode):  # mode為LtoR
     if not mode:
         for i in range(thr_line, binary.shape[1], 1):
             s[i] = sum(binary[:, i]) / 255  # col加總
-            index_col = np.argmin(s[::-1])  # 找出最小索引值
+        index_col = np.argmin(s)  # 找出最小索引值
     else:
         for i in range(thr_line, 0, -1):
             s[i] = sum(binary[:, i]) / 255  # col加總
-            index_col = np.argmin(s[::-1])  # 找出最小索引值
-
+        index_col = np.argmin(s)  # 找出最小索引值
     return index_col
 
 
