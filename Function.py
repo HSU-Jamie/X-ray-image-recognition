@@ -181,7 +181,7 @@ def start_work(config, cam0, cam1, start_time):
                                     res1 = origin1[0:config.bottom_limit,
                                            (loc[0] + input_target.shape[1]):config.video_col]
                                     take_picture(res0, res1, config.folder_path, config.xraytype)
-                                    input_target = origin0[0:config.bottom_limit, (col - 100):col]
+                                    input_target = origin0[0:config.bottom_limit, config.video_col - 100:config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                         if (loc[0] + input_target.shape[1]) <= config.thr_line:
@@ -350,32 +350,32 @@ def start_work(config, cam0, cam1, start_time):
                                     res = origin[0:config.bottom_limit,
                                            (loc[0] + input_target.shape[1]):config.video_col]
                                     take_picture(res, config.folder_path, config.xraytype)
-                                    input_target = origin[0:config.bottom_limit, (col - 100):col]
+                                    input_target = origin[0:config.bottom_limit, (config.video_col - 100):config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                            if (loc[0] + input_target.shape[1]) <= config.thr_line:
-                                capture_time = time() - start_time
-                                if capture_time < config.capture_min_time:
-                                    print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
-                                else:
-                                    print('截圖費時: ', '{:.2f}\n'.format(capture_time))
-                                    start_time = time()
-                                    if config.showpic:
-                                        print('未找到最低點，但物件過長向後尋找可能的物件邊界並截圖\n')
-                                    col = get_accument(binary, loc[0] + input_target.shape[1] + config.min_dist,
-                                                       config.LtoR)
-                                    res = origin[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
-                                    take_picture(res, config.folder_path, config.xraytype)
-                                    input_target = origin[0:config.bottom_limit, (col - 100):col]
-                                    input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
+                        if (loc[0] + input_target.shape[1]) <= config.thr_line:
+                            capture_time = time() - start_time
+                            if capture_time < config.capture_min_time:
+                                print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
+                            else:
+                                print('截圖費時: ', '{:.2f}\n'.format(capture_time))
+                                start_time = time()
+                                if config.showpic:
+                                    print('未找到最低點，但物件過長向後尋找可能的物件邊界並截圖\n')
+                                col = get_accument(binary, loc[0] + input_target.shape[1] + config.min_dist,
+                                                   config.LtoR)
+                                res = origin[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
+                                take_picture(res, config.folder_path, config.xraytype)
+                                input_target = origin[0:config.bottom_limit, (col - 100):col]
+                                input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                        else:
-                            col = get_accument(binary, config.thr_line, config.LtoR)
-                            if config.showpic:
-                                print('遺失邊框 找新框\n')
-                                cv2.rectangle(frame, (col - 100, 0), (col, config.bottom_limit), (0, 0, 255), 4)
-                            input_target = origin[0:config.bottom_limit, col - 100:col]
-                            input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
+                    else:
+                        col = get_accument(binary, config.thr_line, config.LtoR)
+                        if config.showpic:
+                            print('遺失邊框 找新框\n')
+                            cv2.rectangle(frame, (col - 100, 0), (col, config.bottom_limit), (0, 0, 255), 4)
+                        input_target = origin[0:config.bottom_limit, col - 100:col]
+                        input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                 else:
                     if not input_target.size:  # 倘使無初始相片可供matchTemplate比對，則自行找
@@ -416,28 +416,28 @@ def start_work(config, cam0, cam1, start_time):
                                     input_target = origin[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                            if loc[0] >= config.thr_line:
-                                capture_time = time() - start_time
-                                if capture_time < config.capture_min_time:
-                                    print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
-                                else:
-                                    print('截圖費時: ', '{:.2f}\n'.format(capture_time))
-                                    start_time = time()
-                                    if config.showpic:
-                                        print('未找到最低點，但物件過長向後尋找可能的物件邊界並截圖\n')
-                                    col = get_accument(binary, loc[0] - config.min_dist, config.LtoR)
-                                    res = origin[0:config.bottom_limit, col:loc[0]]
-                                    take_picture(res, config.folder_path, config.xraytype)
-                                    input_target = origin[0:config.bottom_limit, col:col+100]
-                                    input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
+                        if loc[0] >= config.thr_line:
+                            capture_time = time() - start_time
+                            if capture_time < config.capture_min_time:
+                                print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
+                            else:
+                                print('截圖費時: ', '{:.2f}\n'.format(capture_time))
+                                start_time = time()
+                                if config.showpic:
+                                    print('未找到最低點，但物件過長向後尋找可能的物件邊界並截圖\n')
+                                col = get_accument(binary, loc[0] - config.min_dist, config.LtoR)
+                                res = origin[0:config.bottom_limit, col:loc[0]]
+                                take_picture(res, config.folder_path, config.xraytype)
+                                input_target = origin[0:config.bottom_limit, col:col+100]
+                                input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                        else:
-                            col = get_accument(binary, config.thr_line, config.LtoR)
-                            if config.showpic:
-                                print('遺失邊框 找新框\n')
-                                cv2.rectangle(frame, (col + 100, 0), (col, config.bottom_limit), (0, 0, 255), 4)
-                            input_target = origin[0:config.bottom_limit, col:col+100]
-                            input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
+                    else:
+                        col = get_accument(binary, config.thr_line, config.LtoR)
+                        if config.showpic:
+                            print('遺失邊框 找新框\n')
+                            cv2.rectangle(frame, (col + 100, 0), (col, config.bottom_limit), (0, 0, 255), 4)
+                        input_target = origin[0:config.bottom_limit, col:col+100]
+                        input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                 if config.showpic:
                     cv2.imshow('res', res)
