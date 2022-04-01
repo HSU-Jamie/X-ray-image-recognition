@@ -111,8 +111,6 @@ def take_picture(*args):
 
 def start_work(config, cam0, cam1, start_time):
     frame_num = 0
-    count = 0
-    binary = None
     input_target = np.array([])
 
     if config.xraytype == 1:  # 雙射源
@@ -146,15 +144,12 @@ def start_work(config, cam0, cam1, start_time):
                             cv2.line(frame0, (col, 0), (col, config.bottom_limit), (0, 0, 255), 4)
 
                         res0 = origin0[0:config.bottom_limit, config.thr_line:col]
-                        res1 = origin1[0:config.bottom_limit, config.thr_line:col]
+
                         input_target = origin0[0:config.bottom_limit, col - 100: col]
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                    result_col = config.video_col - input_target.shape[1] + 1
-                    result_row = config.video_row - input_target.shape[0] + 1
-                    result = np.zeros((result_col, result_row, cv2.CV_32FC1), dtype='int8')
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
-                    min_val, max_val, _, loc = cv2.minMaxLoc(result)
+                    _, max_val, _, loc = cv2.minMaxLoc(result)
 
                     if max_val == 1:
                         if config.showpic:
@@ -218,15 +213,12 @@ def start_work(config, cam0, cam1, start_time):
                             cv2.line(frame0, (col, 0), (col, config.bottom_limit), (0, 0, 255), 4)
 
                         res0 = origin0[0:config.bottom_limit, config.thr_line:col]
-                        res1 = origin1[0:config.bottom_limit, config.thr_line:col]
+
                         input_target = origin0[0:config.bottom_limit, col + 100: col]
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                    result_col = config.video_col - input_target.shape[1] + 1
-                    result_row = config.video_row - input_target.shape[0] + 1
-                    result = np.zeros((result_col, result_row, cv2.CV_32FC1), dtype='int8')
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
-                    min_val, max_val, _, loc = cv2.minMaxLoc(result)
+                    _, max_val, _, loc = cv2.minMaxLoc(result)
 
                     if max_val == 1:
                         if config.showpic:
@@ -325,7 +317,7 @@ def start_work(config, cam0, cam1, start_time):
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
-                    min_val, max_val, _, loc = cv2.minMaxLoc(result)
+                    _, max_val, _, loc = cv2.minMaxLoc(result)
 
                     if max_val == 1:
                         if config.showpic:
@@ -389,7 +381,7 @@ def start_work(config, cam0, cam1, start_time):
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
-                    min_val, max_val, _, loc = cv2.minMaxLoc(result)
+                    _, max_val, _, loc = cv2.minMaxLoc(result)
 
                     if max_val == 1:
                         if config.showpic:

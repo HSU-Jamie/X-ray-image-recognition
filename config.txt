@@ -1,5 +1,5 @@
-capture0 = 1_RTOL.mp4
-capture1 = 1_RTOL.mp4
+capture0 = 2_RTOL.mp4
+capture1 = 2_RTOL.mp4
 folder_path=D:\input
 LtoR = 0
 duration = 10
