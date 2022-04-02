@@ -109,11 +109,28 @@ def take_picture(*args):
     pass
 
 
+def check_input_target(config, binary, input_target, frame0, origin0, gray):
+    if not input_target.size:  # 倘使無初始相片可供matchTemplate比對，則自行找
+        col = get_accument(binary, config.thr_line, config.LtoR)
+        if config.showpic:
+            cv2.line(frame0, (col, 0), (col, config.bottom_limit), (0, 0, 255), 4)
+        res0 = origin0[0:config.bottom_limit, config.thr_line:col]
+        if not config.LtoR:
+            input_target = origin0[0:config.bottom_limit, col - 100: col]
+        else:
+            input_target = origin0[0:config.bottom_limit, col + 100: col]
+        input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
+
+    result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
+    _, max_val, _, loc = cv2.minMaxLoc(result)
+    return  col, input_target, max_val, loc
+
+
 def start_work(config, cam0, cam1, start_time):
     frame_num = 0
     input_target = np.array([])
 
-    if config.xraytype == 1:  # 雙射源
+    if config.xraytype:  # 雙射源
         while True:
             ret0, frame0 = cam0.read()
             ret1, frame1 = cam1.read()
@@ -150,6 +167,7 @@ def start_work(config, cam0, cam1, start_time):
 
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, loc = cv2.minMaxLoc(result)
+                    # col, input_target, max_val, loc = check_input_target(config, binary, input_target, frame0, origin0, gray)
 
                     if max_val == 1:
                         if config.showpic:
