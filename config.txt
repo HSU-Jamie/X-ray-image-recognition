@@ -1,6 +1,6 @@
 capture0 = 2_RTOL.mp4
 capture1 = 2_RTOL.mp4
-folder_path=D:\input
+folder_path=./pic
 LtoR = 0
 duration = 10
 xraytype = 1
