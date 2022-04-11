@@ -1,4 +1,5 @@
-from time import time
+import os
+import time
 
 import cv2
 import numpy as np
@@ -105,15 +106,50 @@ def get_accument(binary, thr_line, mode):  # mode為LtoR
     return index_col
 
 
-def take_picture(*args):
-    pass
+def take_picture(*args):  # [pic1, path] or [pic1, pic2, path]
+    str_filedate = time.strftime('%Y%m%d%H%M-%S', time.localtime())
+    if args[-1] == '':
+        path = 'C:/frameCapture2/pic'
+    else:
+        path = args[-1]
+    if not os.path.exists(path):
+        os.mkdir(path)
+    if len(args) == 2:  # 單射源
+        picfilename = str_filedate + '.jpg'
+        cv2.imwrite(path + '/' + picfilename, args[0])
+
+    elif len(args) == 3:  # 雙射源
+        picfilename1 = str_filedate + '_A.jpg'
+        picfilename2 = str_filedate + '_B.jpg'
+        cv2.imwrite(path + '/' + picfilename1, args[0])
+        cv2.imwrite(path + '/' + picfilename2, args[1])
+
+    else:  # 進來的東西是錯的
+        print('take_picture error')
+
+
+def check_input_target(config, binary, input_target, frame0, origin0, gray):
+    if not input_target.size:  # 倘使無初始相片可供matchTemplate比對，則自行找
+        col = get_accument(binary, config.thr_line, config.LtoR)
+        if config.showpic:
+            cv2.line(frame0, (col, 0), (col, config.bottom_limit), (0, 0, 255), 4)
+        res0 = origin0[0:config.bottom_limit, config.thr_line:col]
+        if not config.LtoR:
+            input_target = origin0[0:config.bottom_limit, col - 100: col]
+        else:
+            input_target = origin0[0:config.bottom_limit, col + 100: col]
+        input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
+
+    result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
+    _, max_val, _, loc = cv2.minMaxLoc(result)
+    return col, input_target, max_val, loc
 
 
 def start_work(config, cam0, cam1, start_time):
     frame_num = 0
     input_target = np.array([])
 
-    if config.xraytype == 1:  # 雙射源
+    if config.xraytype:  # 雙射源
         while True:
             ret0, frame0 = cam0.read()
             ret1, frame1 = cam1.read()
@@ -150,6 +186,7 @@ def start_work(config, cam0, cam1, start_time):
 
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, loc = cv2.minMaxLoc(result)
+                    # col, input_target, max_val, loc = check_input_target(config, binary, input_target, frame0, origin0, gray)
 
                     if max_val == 1:
                         if config.showpic:
@@ -163,29 +200,30 @@ def start_work(config, cam0, cam1, start_time):
                         if (config.video_col - (loc[0] + input_target.shape[1])) > config.min_dist:  # 大於指定寬度開始搜尋
                             temp = sum(binary[:, config.video_col - 10]) / 255
                             if temp < 10:
-                                capture_time = time() - start_time
+                                capture_time = time.time() - start_time
                                 if capture_time < config.capture_min_time:
                                     print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
                                 else:
                                     print('截圖費時: ', '{:.2f}\n'.format(capture_time))
-                                    start_time = time()
+                                    start_time = time.time()
                                     if config.showpic:
                                         print('找到最低點截圖\n')
                                     res0 = origin0[0:config.bottom_limit,
                                            (loc[0] + input_target.shape[1]):config.video_col]
                                     res1 = origin1[0:config.bottom_limit,
                                            (loc[0] + input_target.shape[1]):config.video_col]
-                                    take_picture(res0, res1, config.folder_path, config.xraytype)
-                                    input_target = origin0[0:config.bottom_limit, config.video_col - 100:config.video_col]
+                                    take_picture(res0, res1, config.folder_path)
+                                    input_target = origin0[0:config.bottom_limit,
+                                                   config.video_col - 100:config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                         if (loc[0] + input_target.shape[1]) <= config.thr_line:
-                            capture_time = time() - start_time
+                            capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
                             else:
                                 print('截圖費時: ', '{:.2f}\n'.format(capture_time))
-                                start_time = time()
+                                start_time = time.time()
                                 if config.showpic:
                                     print('未找到最低點，但物件過長向後尋找可能的物件邊界並截圖\n')
                                 col = get_accument(binary, loc[0] + input_target.shape[1] + config.min_dist,
@@ -193,7 +231,7 @@ def start_work(config, cam0, cam1, start_time):
                                                    config.LtoR)
                                 res0 = origin0[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
                                 res1 = origin1[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
-                                take_picture(res0, res1, config.folder_path, config.xraytype)
+                                take_picture(res0, res1, config.folder_path)
                                 input_target = origin0[0:config.bottom_limit, (col - 100):col]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -232,33 +270,33 @@ def start_work(config, cam0, cam1, start_time):
                         if loc[0] > config.min_dist:  # 大於指定寬度開始搜尋
                             temp = sum(binary[:, 10]) / 255
                             if temp < 10:
-                                capture_time = time() - start_time
+                                capture_time = time.time() - start_time
                                 if capture_time < config.capture_min_time:
                                     print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
                                 else:
                                     print('截圖費時: ', '{:.2f}\n'.format(capture_time))
-                                    start_time = time()
+                                    start_time = time.time()
                                     if config.showpic:
                                         print('找到最低點截圖\n')
                                     res0 = origin0[0:config.bottom_limit, 0:loc[0]]
                                     res1 = origin1[0:config.bottom_limit, 0:loc[0]]
-                                    take_picture(res0, res1, config.folder_path, config.xraytype)
+                                    take_picture(res0, res1, config.folder_path)
                                     input_target = origin0[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                         if loc[0] > config.thr_line:
-                            capture_time = time() - start_time
+                            capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
                             else:
                                 print('截圖費時: ', '{:.2f}\n'.format(capture_time))
-                                start_time = time()
+                                start_time = time.time()
                                 if config.showpic:
                                     print('未找到最低點，但物件過長向後尋找可能的物件邊界並截圖\n')
                                 col = get_accument(binary, loc[0] - config.min_dist, config.LtoR)
                                 res0 = origin0[0:config.bottom_limit, col:loc[0]]
                                 res1 = origin1[0:config.bottom_limit, col:loc[0]]
-                                take_picture(res0, res1, config.folder_path, config.xraytype)
+                                take_picture(res0, res1, config.folder_path)
                                 input_target = origin0[0:config.bottom_limit, col:col + 100]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -331,34 +369,35 @@ def start_work(config, cam0, cam1, start_time):
                         if (config.video_col - (loc[0] + input_target.shape[1])) > config.min_dist:
                             temp = sum(binary[:, config.video_col - 10]) / 255
                             if temp < 10:
-                                capture_time = time() - start_time
+                                capture_time = time.time() - start_time
 
                                 if capture_time < config.capture_min_time:
                                     print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
                                 else:
                                     print('截圖費時: ', '{:.2f}\n'.format(capture_time))
-                                    start_time = time()
+                                    start_time = time.time()
                                     if config.showpic:
                                         print('找到最低點截圖\n')
                                     res = origin[0:config.bottom_limit,
-                                           (loc[0] + input_target.shape[1]):config.video_col]
-                                    take_picture(res, config.folder_path, config.xraytype)
-                                    input_target = origin[0:config.bottom_limit, (config.video_col - 100):config.video_col]
+                                          (loc[0] + input_target.shape[1]):config.video_col]
+                                    take_picture(res, config.folder_path)
+                                    input_target = origin[0:config.bottom_limit,
+                                                   (config.video_col - 100):config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                         if (loc[0] + input_target.shape[1]) <= config.thr_line:
-                            capture_time = time() - start_time
+                            capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
                             else:
                                 print('截圖費時: ', '{:.2f}\n'.format(capture_time))
-                                start_time = time()
+                                start_time = time.time()
                                 if config.showpic:
                                     print('未找到最低點，但物件過長向後尋找可能的物件邊界並截圖\n')
                                 col = get_accument(binary, loc[0] + input_target.shape[1] + config.min_dist,
                                                    config.LtoR)
                                 res = origin[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
-                                take_picture(res, config.folder_path, config.xraytype)
+                                take_picture(res, config.folder_path)
                                 input_target = origin[0:config.bottom_limit, (col - 100):col]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -395,33 +434,33 @@ def start_work(config, cam0, cam1, start_time):
                         if loc[0] > config.min_dist:
                             temp = sum(binary[:, 10]) / 255
                             if temp < 10:
-                                capture_time = time() - start_time
+                                capture_time = time.time() - start_time
 
                                 if capture_time < config.capture_min_time:
                                     print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
                                 else:
                                     print('截圖費時: ', '{:.2f}\n'.format(capture_time))
-                                    start_time = time()
+                                    start_time = time.time()
                                     if config.showpic:
                                         print('找到最低點截圖\n')
                                     res = origin[0:config.bottom_limit, 0:loc[0]]
-                                    take_picture(res, config.folder_path, config.xraytype)
+                                    take_picture(res, config.folder_path)
                                     input_target = origin[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                         if loc[0] >= config.thr_line:
-                            capture_time = time() - start_time
+                            capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
                             else:
                                 print('截圖費時: ', '{:.2f}\n'.format(capture_time))
-                                start_time = time()
+                                start_time = time.time()
                                 if config.showpic:
                                     print('未找到最低點，但物件過長向後尋找可能的物件邊界並截圖\n')
                                 col = get_accument(binary, loc[0] - config.min_dist, config.LtoR)
                                 res = origin[0:config.bottom_limit, col:loc[0]]
-                                take_picture(res, config.folder_path, config.xraytype)
-                                input_target = origin[0:config.bottom_limit, col:col+100]
+                                take_picture(res, config.folder_path)
+                                input_target = origin[0:config.bottom_limit, col:col + 100]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                     else:
@@ -429,7 +468,7 @@ def start_work(config, cam0, cam1, start_time):
                         if config.showpic:
                             print('遺失邊框 找新框\n')
                             cv2.rectangle(frame, (col + 100, 0), (col, config.bottom_limit), (0, 0, 255), 4)
-                        input_target = origin[0:config.bottom_limit, col:col+100]
+                        input_target = origin[0:config.bottom_limit, col:col + 100]
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                 if config.showpic:
