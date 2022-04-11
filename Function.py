@@ -82,9 +82,9 @@ def open_camera(capture0, capture1):  # 讀取鏡頭並回傳給主程式
 
 def set_window(cam0, cam1, showpic, video_col, video_row):  # 設定視窗大小
     if showpic != 0:
-        cv2.namedWindow('frame', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('frame', cv2.WINDOW_GUI_NORMAL)
         cv2.resizeWindow('frame', video_col // 2, video_row // 2)
-        cv2.namedWindow('bin', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('bin', cv2.WINDOW_GUI_NORMAL)
         cv2.resizeWindow('bin', video_col // 2, video_row // 2)
     cam0.set(cv2.CAP_PROP_FRAME_WIDTH, video_col)
     cam0.set(cv2.CAP_PROP_FRAME_HEIGHT, video_row)
@@ -428,8 +428,7 @@ def start_work(config, cam0, cam1, start_time):
                             print('max_val = 1, match error\n')
                         max_val = 0
                     if max_val > config.maxVal_thr:
-                        cv2.rectangle(frame, loc,
-                                      (loc[0] + input_target.shape[1], loc[1] + input_target.shape[0], (0, 255, 0), 4))
+                        cv2.rectangle(frame, loc, (loc[0] + input_target.shape[1], loc[1] + input_target.shape[0]), (0, 255, 0), 4)
 
                         if loc[0] > config.min_dist:
                             temp = sum(binary[:, 10]) / 255
