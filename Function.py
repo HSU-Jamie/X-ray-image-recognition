@@ -212,9 +212,9 @@ def start_work(config, cam0, cam1, start_time):
                         if config.showpic:
                             cv2.line(frame0, (col, 0), (col, config.bottom_limit), (0, 0, 255), 4)
 
-                        res0 = origin0[0:config.bottom_limit, config.thr_line:col]
+                        res0 = origin0[0:config.bottom_limit, col:config.thr_line]
 
-                        input_target = origin0[0:config.bottom_limit, col + 100: col]
+                        input_target = origin0[0:config.bottom_limit, col: col+100]
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
@@ -271,6 +271,7 @@ def start_work(config, cam0, cam1, start_time):
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                 if config.showpic:
+
                     cv2.imshow('res', res0)
                     cv2.imshow('frame', frame0)
                     cv2.imshow('bin', binary)
@@ -376,8 +377,8 @@ def start_work(config, cam0, cam1, start_time):
                         if config.showpic:
                             cv2.line(frame, (col, 0), (col, config.bottom_limit), (0, 0, 255), 4)
 
-                        res = origin[0:config.bottom_limit, config.thr_line, col]
-                        input_target = origin[0: config.bottom_limit, col + 100:col]
+                        res = origin[0:config.bottom_limit, col:config.thr_line]
+                        input_target = origin[0: config.bottom_limit, col:col + 100]
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
