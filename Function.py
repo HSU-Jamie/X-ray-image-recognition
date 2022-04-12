@@ -1,6 +1,5 @@
 import os
 import time
-
 import cv2
 import numpy as np
 
@@ -128,23 +127,6 @@ def take_picture(*args):  # [pic1, path] or [pic1, pic2, path]
         print('take_picture error')
 
 
-def check_input_target(config, binary, input_target, frame0, origin0, gray):
-    if not input_target.size:  # 倘使無初始相片可供matchTemplate比對，則自行找
-        col = get_accument(binary, config.thr_line, config.LtoR)
-        if config.showpic:
-            cv2.line(frame0, (col, 0), (col, config.bottom_limit), (0, 0, 255), 4)
-        res0 = origin0[0:config.bottom_limit, config.thr_line:col]
-        if not config.LtoR:
-            input_target = origin0[0:config.bottom_limit, col - 100: col]
-        else:
-            input_target = origin0[0:config.bottom_limit, col + 100: col]
-        input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
-
-    result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
-    _, max_val, _, loc = cv2.minMaxLoc(result)
-    return col, input_target, max_val, loc
-
-
 def start_work(config, cam0, cam1, start_time):
     frame_num = 0
     input_target = np.array([])
@@ -156,10 +138,10 @@ def start_work(config, cam0, cam1, start_time):
             if not (ret0 or ret1):
                 print('camera error\n')
                 break
-
+            # 去掉下方Bar
             frame0 = frame0[0:config.bottom_limit, 0:config.video_col]
             frame1 = frame1[0:config.bottom_limit, 0:config.video_col]
-
+            # 指定禎數
             if (frame_num % config.duration) == 0:
                 roi_start = cv2.cvtColor(frame0, cv2.COLOR_BGR2GRAY)
                 origin0 = frame0.copy()
@@ -167,7 +149,7 @@ def start_work(config, cam0, cam1, start_time):
 
                 if config.showpic:
                     cv2.line(frame0, (config.thr_line, 0), (config.thr_line, config.bottom_limit), (255, 0, 0), 4)
-
+                # 轉灰階做二值化
                 gray = cv2.cvtColor(origin0, cv2.COLOR_BGR2GRAY)
                 _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
 
@@ -183,17 +165,17 @@ def start_work(config, cam0, cam1, start_time):
 
                         input_target = origin0[0:config.bottom_limit, col - 100: col]
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
-
+                    #比對input_target 在 gray的位置
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, loc = cv2.minMaxLoc(result)
-                    # col, input_target, max_val, loc = check_input_target(config, binary, input_target, frame0, origin0, gray)
+
 
                     if max_val == 1:
                         if config.showpic:
                             print('max_val = 1, match error\n')
                         max_val = 0
 
-                    if max_val > config.maxVal_thr:
+                    if max_val > config.maxVal_thr: # 根據比對結果框選邊框，並決定擷取條件。
                         cv2.rectangle(frame0, loc, (loc[0] + input_target.shape[1], loc[1] + input_target.shape[0]),
                                       (0, 255, 0), 4)
 
@@ -217,7 +199,7 @@ def start_work(config, cam0, cam1, start_time):
                                                    config.video_col - 100:config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                        if (loc[0] + input_target.shape[1]) <= config.thr_line:
+                        if (loc[0] + input_target.shape[1]) <= config.thr_line: # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
@@ -252,9 +234,9 @@ def start_work(config, cam0, cam1, start_time):
 
                         res0 = origin0[0:config.bottom_limit, col:config.thr_line]
 
-                        input_target = origin0[0:config.bottom_limit, col: col+100]
+                        input_target = origin0[0:config.bottom_limit, col:col + 100]
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
-
+                    # 比對input_target 在 gray的位置
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, loc = cv2.minMaxLoc(result)
 
@@ -263,7 +245,7 @@ def start_work(config, cam0, cam1, start_time):
                             print('max_val = 1, match error\n')
                         max_val = 0
 
-                    if max_val > config.maxVal_thr:
+                    if max_val > config.maxVal_thr: # 根據比對結果框選邊框，並決定擷取條件。
                         cv2.rectangle(frame0, loc, (loc[0] + input_target.shape[1], loc[1] + input_target.shape[0]),
                                       (0, 255, 0), 4)
 
@@ -284,7 +266,7 @@ def start_work(config, cam0, cam1, start_time):
                                     input_target = origin0[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                        if loc[0] > config.thr_line:
+                        if loc[0] > config.thr_line: # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
@@ -344,7 +326,7 @@ def start_work(config, cam0, cam1, start_time):
                 gray = cv2.cvtColor(origin, cv2.COLOR_BGR2GRAY)
                 _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
 
-                if not config.LtoR:
+                if not config.LtoR: #LtoR = 0物件由右至左 <--
                     if not input_target.size:  # 倘使無初始相片可供matchTemplate比對，則自行找
                         col = get_accument(binary, config.thr_line, config.LtoR)
 
@@ -362,7 +344,7 @@ def start_work(config, cam0, cam1, start_time):
                         if config.showpic:
                             print('max_val = 1, match error\n')
                         max_val = 0
-                    if max_val > config.maxVal_thr:
+                    if max_val > config.maxVal_thr: #根據比對結果框選邊框，並決定擷取條件。
                         cv2.rectangle(frame, loc,
                                       (loc[0] + input_target.shape[1], loc[1] + input_target.shape[0]), (0, 255, 0), 4)
 
@@ -385,7 +367,7 @@ def start_work(config, cam0, cam1, start_time):
                                                    (config.video_col - 100):config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                        if (loc[0] + input_target.shape[1]) <= config.thr_line:
+                        if (loc[0] + input_target.shape[1]) <= config.thr_line: # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
@@ -401,7 +383,7 @@ def start_work(config, cam0, cam1, start_time):
                                 input_target = origin[0:config.bottom_limit, (col - 100):col]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                    else:
+                    else: # 遺失邊框 找新框
                         col = get_accument(binary, config.thr_line, config.LtoR)
                         if config.showpic:
                             print('遺失邊框 找新框\n')
@@ -409,7 +391,7 @@ def start_work(config, cam0, cam1, start_time):
                         input_target = origin[0:config.bottom_limit, col - 100:col]
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                else:
+                else: # LtoR = 1 物件由左至右 -->
                     if not input_target.size:  # 倘使無初始相片可供matchTemplate比對，則自行找
                         col = get_accument(binary, config.thr_line, config.LtoR)
 
@@ -427,11 +409,11 @@ def start_work(config, cam0, cam1, start_time):
                         if config.showpic:
                             print('max_val = 1, match error\n')
                         max_val = 0
-                    if max_val > config.maxVal_thr:
+                    if max_val > config.maxVal_thr: # 根據比對結果框選邊框，並決定擷取條件。
                         cv2.rectangle(frame, loc,
                                       (loc[0] + input_target.shape[1], loc[1] + input_target.shape[0], (0, 255, 0), 4))
 
-                        if loc[0] > config.min_dist:
+                        if loc[0] > config.min_dist: # 大於一定寬度開始找尋
                             temp = sum(binary[:, 10]) / 255
                             if temp < 10:
                                 capture_time = time.time() - start_time
@@ -448,7 +430,7 @@ def start_work(config, cam0, cam1, start_time):
                                     input_target = origin[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                        if loc[0] >= config.thr_line:
+                        if loc[0] >= config.thr_line: # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
@@ -463,7 +445,7 @@ def start_work(config, cam0, cam1, start_time):
                                 input_target = origin[0:config.bottom_limit, col:col + 100]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                    else:
+                    else: # 遺失邊框 找新框
                         col = get_accument(binary, config.thr_line, config.LtoR)
                         if config.showpic:
                             print('遺失邊框 找新框\n')
