@@ -1,13 +1,53 @@
 import os
 import time
+
 import cv2
 import numpy as np
 
 
 class Config:
-    def __init__(self, capture0='', capture1='', LtoR=0, bottom_limit=0, thr_line=0, showpic=0, video_col=0,
-                 video_row=0, maxVal_thr=0,
-                 min_dist=0, capture_min_time=0, folder_path='', duration=60, xraytype=0):  # 宣告的config相對應的變數
+    def __init__(self, largest_area_thr=50000, thresholdProb=0.1, thresholdProbClass1=0.1, thresholdProbClass2=0.1,
+                 thresholdProbClass3=0.1, thresholdProbClass4=0.1, thresholdProbClass5=0.1, thresholdProbClass6=0.1,
+                 thresholdProbClass7=0.1, thresholdProbClass8=0.1, thresholdProbClass9=0.1, thresholdProbClass10=0.1,
+                 thresholdProbClass11=0.1, thresholdProbClass12=0.1, thresholdProbClass13=0.1, thresholdProbClass14=0.1,
+                 thresholdProb2=0.1, cfg1='', weights1='', names1='', cfg2='', weights2='', names2='', testPicture=0,
+                 testPicture_path='', testPicture_savepath='', debugMode=1, test_Path='', capture0='', capture1='',
+                 LtoR=0, bottom_limit=0, thr_line=0, showpic=0, video_col=0, video_row=0, maxVal_thr=0,
+                 min_dist=0, capture_min_time=0, folder_path='', duration=60, xraytype=0, frame_width=0,
+                 frame_height=0, frame_coordinate_x=0, frame_coordinate_y=0, inputtarget_width=0, acc_thr=0,
+                 error_template_times=0):  # 宣告的config相對應的變數
+        # [Main]
+        self.largest_area_thr = largest_area_thr
+        self.thresholdProb = thresholdProb
+        self.thresholdProb2 = thresholdProb2
+        self.thresholdProbClass1 = thresholdProbClass1
+        self.thresholdProbClass2 = thresholdProbClass2
+        self.thresholdProbClass3 = thresholdProbClass3
+        self.thresholdProbClass4 = thresholdProbClass4
+        self.thresholdProbClass5 = thresholdProbClass5
+        self.thresholdProbClass6 = thresholdProbClass6
+        self.thresholdProbClass7 = thresholdProbClass7
+        self.thresholdProbClass8 = thresholdProbClass8
+        self.thresholdProbClass9 = thresholdProbClass9
+        self.thresholdProbClass10 = thresholdProbClass10
+        self.thresholdProbClass11 = thresholdProbClass11
+        self.thresholdProbClass12 = thresholdProbClass12
+        self.thresholdProbClass13 = thresholdProbClass13
+        self.thresholdProbClass14 = thresholdProbClass14
+        # [YOLO]
+        self.cfg1 = cfg1
+        self.weights1 = weights1
+        self.names1 = names1
+        self.cfg2 = cfg2
+        self.weights2 = weights2
+        self.names2 = names2
+        # [Test]
+        self.testPicture = testPicture
+        self.testPicture_path = testPicture_path
+        self.testPicture_savepath = testPicture_savepath
+        self.debugMode = debugMode
+        self.test_Path = test_Path
+        # [FrameCapture]
         self.capture0 = capture0
         self.capture1 = capture1
         self.LtoR = LtoR
@@ -22,18 +62,80 @@ class Config:
         self.maxVal_thr = maxVal_thr
         self.min_dist = min_dist
         self.capture_min_time = capture_min_time
+        self.frame_width = frame_width
+        self.frame_height = frame_height
+        self.frame_coordinate_x = frame_coordinate_x
+        self.frame_coordinate_y = frame_coordinate_y
+        self.inputtarget_width = inputtarget_width
+        self.acc_thr = acc_thr
+        self.error_template_times = error_template_times
 
-    def load_config(self):  # 將config檔案讀取並放到相對應的變數
-        path = './config.txt'
+    def load_config(self, path):  # 將config檔案讀取並放到相對應的變數
         try:
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 for line in f.readlines():
                     temp = line.strip().split('=')  # 去掉空白並以=分割
-                    if temp[0].find('LtoR') != -1:
+                    if temp[0].find('largest_area_thr') != -1:
+                        self.largest_area_thr = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProb') != -1:
+                        self.thresholdProb = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProb2') != -1:
+                        self.thresholdProb2 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass1') != -1:
+                        self.thresholdProbClass1 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass2') != -1:
+                        self.thresholdProbClass2 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass3') != -1:
+                        self.thresholdProbClass3 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass4') != -1:
+                        self.thresholdProbClass4 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass5') != -1:
+                        self.thresholdProbClass5 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass6') != -1:
+                        self.thresholdProbClass6 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass7') != -1:
+                        self.thresholdProbClass7 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass8') != -1:
+                        self.thresholdProbClass8 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass9') != -1:
+                        self.thresholdProbClass9 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass10') != -1:
+                        self.thresholdProbClass10 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass11') != -1:
+                        self.thresholdProbClass11 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass12') != -1:
+                        self.thresholdProbClass12 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass13') != -1:
+                        self.thresholdProbClass13 = eval(temp[1].strip())
+                    elif temp[0].find('thresholdProbClass14') != -1:
+                        self.thresholdProbClass14 = eval(temp[1].strip())
+                    elif temp[0].find('cfg1') != -1:
+                        self.cfg1 = temp[1].strip()
+                    elif temp[0].find('weights1') != -1:
+                        self.weights1 = temp[1].strip()
+                    elif temp[0].find('names1') != -1:
+                        self.names1 = temp[1].strip()
+                    elif temp[0].find('cfg2') != -1:
+                        self.cfg2 = temp[1].strip()
+                    elif temp[0].find('weights2') != -1:
+                        self.weights2 = temp[1].strip()
+                    elif temp[0].find('names2') != -1:
+                        self.names2 = temp[1].strip()
+                    elif temp[0] == 'testPicture':
+                        self.testPicture = eval(temp[1].strip())
+                    elif temp[0].find('testPicture_path') != -1:
+                        self.testPicture_path = temp[1].strip()
+                    elif temp[0].find('testPicture_savepath') != -1:
+                        self.testPicture_savepath = temp[1].strip()
+                    elif temp[0].find('debugMode') != -1:
+                        self.debugMode = eval(temp[1].strip())
+                    elif temp[0].find('test_Path') != -1:
+                        self.test_Path = temp[1].strip()
+                    elif temp[0].find('LtoR') != -1:
                         self.LtoR = eval(temp[1].strip())
-                    elif temp[0].find('capture0') != -1:
+                    elif temp[0].find('capture0_state') != -1:
                         self.capture0 = temp[1].strip()
-                    elif temp[0].find('capture1') != -1:
+                    elif temp[0].find('capture1_state') != -1:
                         self.capture1 = temp[1].strip()
                     elif temp[0].find('folder_path') != -1:
                         self.folder_path = temp[1]
@@ -57,6 +159,20 @@ class Config:
                         self.min_dist = eval(temp[1])
                     elif temp[0].find('capture_min_time') != -1:
                         self.capture_min_time = eval(temp[1])
+                    elif temp[0].find('frame_width') != -1:
+                        self.frame_width = eval(temp[1])
+                    elif temp[0].find('frame_height') != -1:
+                        self.frame_height = eval(temp[1])
+                    elif temp[0].find('frame_coordinate_x') != -1:
+                        self.frame_coordinate_x = eval(temp[1])
+                    elif temp[0].find('frame_coordinate_y') != -1:
+                        self.frame_coordinate_y = eval(temp[1])
+                    elif temp[0].find('inputtarget_width') != -1:
+                        self.inputtarget_width = eval(temp[1])
+                    elif temp[0].find('acc_thr') != -1:
+                        self.acc_thr = eval(temp[1])
+                    elif temp[0].find('error_template_times') != -1:
+                        self.error_template_times = eval(temp[1])
         except:
             print('load config error')  # 讀取失敗
 
@@ -127,7 +243,7 @@ def take_picture(*args):  # [pic1, path] or [pic1, pic2, path]
         print('take_picture error')
 
 
-def start_work(config, cam0, cam1, start_time):
+def take_suitcase(config, cam0, cam1, start_time):
     frame_num = 0
     input_target = np.array([])
 
@@ -165,17 +281,16 @@ def start_work(config, cam0, cam1, start_time):
 
                         input_target = origin0[0:config.bottom_limit, col - 100: col]
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
-                    #比對input_target 在 gray的位置
+                    # 比對input_target 在 gray的位置
                     result = cv2.matchTemplate(gray, input_target, cv2.TM_CCOEFF_NORMED)
                     _, max_val, _, loc = cv2.minMaxLoc(result)
-
 
                     if max_val == 1:
                         if config.showpic:
                             print('max_val = 1, match error\n')
                         max_val = 0
 
-                    if max_val > config.maxVal_thr: # 根據比對結果框選邊框，並決定擷取條件。
+                    if max_val > config.maxVal_thr:  # 根據比對結果框選邊框，並決定擷取條件。
                         cv2.rectangle(frame0, loc, (loc[0] + input_target.shape[1], loc[1] + input_target.shape[0]),
                                       (0, 255, 0), 4)
 
@@ -199,7 +314,7 @@ def start_work(config, cam0, cam1, start_time):
                                                    config.video_col - 100:config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                        if (loc[0] + input_target.shape[1]) <= config.thr_line: # 如果有過長的寬度則截圖
+                        if (loc[0] + input_target.shape[1]) <= config.thr_line:  # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
@@ -245,7 +360,7 @@ def start_work(config, cam0, cam1, start_time):
                             print('max_val = 1, match error\n')
                         max_val = 0
 
-                    if max_val > config.maxVal_thr: # 根據比對結果框選邊框，並決定擷取條件。
+                    if max_val > config.maxVal_thr:  # 根據比對結果框選邊框，並決定擷取條件。
                         cv2.rectangle(frame0, loc, (loc[0] + input_target.shape[1], loc[1] + input_target.shape[0]),
                                       (0, 255, 0), 4)
 
@@ -266,7 +381,7 @@ def start_work(config, cam0, cam1, start_time):
                                     input_target = origin0[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                        if loc[0] > config.thr_line: # 如果有過長的寬度則截圖
+                        if loc[0] > config.thr_line:  # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
@@ -291,7 +406,6 @@ def start_work(config, cam0, cam1, start_time):
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
                 if config.showpic:
-
                     cv2.imshow('res', res0)
                     cv2.imshow('frame', frame0)
                     cv2.imshow('bin', binary)
@@ -326,7 +440,7 @@ def start_work(config, cam0, cam1, start_time):
                 gray = cv2.cvtColor(origin, cv2.COLOR_BGR2GRAY)
                 _, binary = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
 
-                if not config.LtoR: #LtoR = 0物件由右至左 <--
+                if not config.LtoR:  # LtoR = 0物件由右至左 <--
                     if not input_target.size:  # 倘使無初始相片可供matchTemplate比對，則自行找
                         col = get_accument(binary, config.thr_line, config.LtoR)
 
@@ -344,7 +458,7 @@ def start_work(config, cam0, cam1, start_time):
                         if config.showpic:
                             print('max_val = 1, match error\n')
                         max_val = 0
-                    if max_val > config.maxVal_thr: #根據比對結果框選邊框，並決定擷取條件。
+                    if max_val > config.maxVal_thr:  # 根據比對結果框選邊框，並決定擷取條件。
                         cv2.rectangle(frame, loc,
                                       (loc[0] + input_target.shape[1], loc[1] + input_target.shape[0]), (0, 255, 0), 4)
 
@@ -367,7 +481,7 @@ def start_work(config, cam0, cam1, start_time):
                                                    (config.video_col - 100):config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                        if (loc[0] + input_target.shape[1]) <= config.thr_line: # 如果有過長的寬度則截圖
+                        if (loc[0] + input_target.shape[1]) <= config.thr_line:  # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
@@ -383,7 +497,7 @@ def start_work(config, cam0, cam1, start_time):
                                 input_target = origin[0:config.bottom_limit, (col - 100):col]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                    else: # 遺失邊框 找新框
+                    else:  # 遺失邊框 找新框
                         col = get_accument(binary, config.thr_line, config.LtoR)
                         if config.showpic:
                             print('遺失邊框 找新框\n')
@@ -391,7 +505,7 @@ def start_work(config, cam0, cam1, start_time):
                         input_target = origin[0:config.bottom_limit, col - 100:col]
                         input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                else: # LtoR = 1 物件由左至右 -->
+                else:  # LtoR = 1 物件由左至右 -->
                     if not input_target.size:  # 倘使無初始相片可供matchTemplate比對，則自行找
                         col = get_accument(binary, config.thr_line, config.LtoR)
 
@@ -410,11 +524,11 @@ def start_work(config, cam0, cam1, start_time):
                             print('max_val = 1, match error\n')
                         max_val = 0
 
-                    if max_val > config.maxVal_thr: # 根據比對結果框選邊框，並決定擷取條件。
+                    if max_val > config.maxVal_thr:  # 根據比對結果框選邊框，並決定擷取條件。
                         cv2.rectangle(frame, loc,
                                       (loc[0] + input_target.shape[1], loc[1] + input_target.shape[0], (0, 255, 0), 4))
 
-                        if loc[0] > config.min_dist: # 大於一定寬度開始找尋
+                        if loc[0] > config.min_dist:  # 大於一定寬度開始找尋
                             temp = sum(binary[:, 10]) / 255
                             if temp < 10:
                                 capture_time = time.time() - start_time
@@ -431,7 +545,7 @@ def start_work(config, cam0, cam1, start_time):
                                     input_target = origin[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                        if loc[0] >= config.thr_line: # 如果有過長的寬度則截圖
+                        if loc[0] >= config.thr_line:  # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
                             if capture_time < config.capture_min_time:
                                 print('截圖費時:' + '{:.2f}'.format(capture_time) + 'time too short so pass\n')
@@ -446,7 +560,7 @@ def start_work(config, cam0, cam1, start_time):
                                 input_target = origin[0:config.bottom_limit, col:col + 100]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
-                    else: # 遺失邊框 找新框
+                    else:  # 遺失邊框 找新框
                         col = get_accument(binary, config.thr_line, config.LtoR)
                         if config.showpic:
                             print('遺失邊框 找新框\n')
