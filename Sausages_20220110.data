@@ -1,0 +1,6 @@
+classes= 1
+train  = C:\darknet-master\vs2019_x64\Release\data+\mix\train_OptimSimilarSamples.txt
+valid  = C:\darknet-master\vs2019_x64\Release\data+\mix\valid_OptimSimilarSamples.txt
+names = ./Sausages_20220110.names
+backup = backup_Optimize\
+

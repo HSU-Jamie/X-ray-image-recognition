@@ -1,6 +1,6 @@
 import os
 import time
-
+import darknet
 import cv2
 import numpy as np
 
@@ -10,7 +10,7 @@ class Config:
                  thresholdProbClass3=0.1, thresholdProbClass4=0.1, thresholdProbClass5=0.1, thresholdProbClass6=0.1,
                  thresholdProbClass7=0.1, thresholdProbClass8=0.1, thresholdProbClass9=0.1, thresholdProbClass10=0.1,
                  thresholdProbClass11=0.1, thresholdProbClass12=0.1, thresholdProbClass13=0.1, thresholdProbClass14=0.1,
-                 thresholdProb2=0.1, cfg1='', weights1='', names1='', cfg2='', weights2='', names2='', testPicture=0,
+                 thresholdProb2=0.1, cfg1='', weights1='', names1='', data1='', cfg2='', weights2='', names2='', data2='', testPicture=0,
                  testPicture_path='', testPicture_savepath='', debugMode=1, test_Path='', capture0='', capture1='',
                  LtoR=0, bottom_limit=0, thr_line=0, showpic=0, video_col=0, video_row=0, maxVal_thr=0,
                  min_dist=0, capture_min_time=0, folder_path='', duration=60, xraytype=0, frame_width=0,
@@ -38,9 +38,11 @@ class Config:
         self.cfg1 = cfg1
         self.weights1 = weights1
         self.names1 = names1
+        self.data1 = data1
         self.cfg2 = cfg2
         self.weights2 = weights2
         self.names2 = names2
+        self.data2 = data2
         # [Test]
         self.testPicture = testPicture
         self.testPicture_path = testPicture_path
@@ -176,6 +178,11 @@ class Config:
         except:
             print('load config error')  # 讀取失敗
 
+    def load_model(self):
+        network1, class_names1, class_colors = darknet.load(self.cfg1, self.weights1, self.data1)
+        network2, class_names2, _ = darknet.load(self.cfg2, self.weights2, self.data2)
+        return network1, class_names1, network2, class_names2, class_colors
+
 
 def open_camera(capture0, capture1):  # 讀取鏡頭並回傳給主程式
     if capture0 == '0':
@@ -241,6 +248,33 @@ def take_picture(*args):  # [pic1, path] or [pic1, pic2, path]
 
     else:  # 進來的東西是錯的
         print('take_picture error')
+
+
+def draw_boxes(detections, image, colors):
+    if config.debugMode:
+        for label, confidence, bbox in detections:
+            xmin, ymin, xmax, ymax = darknet.bbox2points(bbox)
+            pt1 = (xmin, ymin)
+            pt2 = (xmax, ymax)
+            cv2.rectangle(image, pt1, pt2, colors[label], 1)
+            cv2.putText(image, "{} [{:.2f}]".format(label, float(confidence)),
+                        (xmin, ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                        colors[label], 2)
+    obj = []
+    for label, confidence, bbox in detections:
+        x, y, w, h = bbox
+        obj.append({'type': label, 'width': w, 'height': h, 'top': y, 'left': x})
+    Xray_result = {'rect': obj}
+
+
+def XrayAicheck_process(image):
+    darknet_image = darknet.make_image(image.shape[0], image.shape[1], 3)
+    darknet.copy_image_from_bytes(darknet_image, image.tobytes())
+    detections1 = darknet.detect_image(network1, class_names1, darknet_image, thresh=0.6)
+    detections2 = darknet.detect_image(network2, class_names2, darknet_image, thresh=0.6)
+    drawboxes(detections1, image, class_colors)
+    drawboxes(detections2, image, class_colors)
+    pass
 
 
 def take_suitcase(config, cam0, cam1, start_time):
@@ -313,6 +347,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                                     input_target = origin0[0:config.bottom_limit,
                                                    config.video_col - 100:config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
+                                    XrayAicheck_process(res)
 
                         if (loc[0] + input_target.shape[1]) <= config.thr_line:  # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
