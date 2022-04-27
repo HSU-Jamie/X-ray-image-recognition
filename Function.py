@@ -1,4 +1,5 @@
 import os
+import pprint
 import time
 import darknet
 import cv2
@@ -71,6 +72,11 @@ class Config:
         self.inputtarget_width = inputtarget_width
         self.acc_thr = acc_thr
         self.error_template_times = error_template_times
+        self.network1 = None
+        self.class_names1 = None
+        self.network2 = None
+        self.class_names2 = None
+        self.class_colors = None
 
     def load_config(self, path):  # 將config檔案讀取並放到相對應的變數
         try:
@@ -117,12 +123,16 @@ class Config:
                         self.weights1 = temp[1].strip()
                     elif temp[0].find('names1') != -1:
                         self.names1 = temp[1].strip()
+                    elif temp[0].find('data1') != -1:
+                        self.data1 = temp[1].strip()
                     elif temp[0].find('cfg2') != -1:
                         self.cfg2 = temp[1].strip()
                     elif temp[0].find('weights2') != -1:
                         self.weights2 = temp[1].strip()
                     elif temp[0].find('names2') != -1:
                         self.names2 = temp[1].strip()
+                    elif temp[0].find('data2') != -1:
+                        self.data2 = temp[1].strip()
                     elif temp[0] == 'testPicture':
                         self.testPicture = eval(temp[1].strip())
                     elif temp[0].find('testPicture_path') != -1:
@@ -179,9 +189,9 @@ class Config:
             print('load config error')  # 讀取失敗
 
     def load_model(self):
-        network1, class_names1, class_colors = darknet.load(self.cfg1, self.weights1, self.data1)
-        network2, class_names2, _ = darknet.load(self.cfg2, self.weights2, self.data2)
-        return network1, class_names1, network2, class_names2, class_colors
+        self.network1, self.class_names1, self.class_colors = darknet.load_network(self.cfg1, self.data1, self.weights1)
+        self.network2, self.class_names2, _ = darknet.load_network(self.cfg2, self.data2, self.weights2)
+
 
 
 def open_camera(capture0, capture1):  # 讀取鏡頭並回傳給主程式
@@ -250,7 +260,7 @@ def take_picture(*args):  # [pic1, path] or [pic1, pic2, path]
         print('take_picture error')
 
 
-def draw_boxes(detections, image, colors):
+def draw_boxes(config, detections, image, colors):
     if config.debugMode:
         for label, confidence, bbox in detections:
             xmin, ymin, xmax, ymax = darknet.bbox2points(bbox)
@@ -261,20 +271,22 @@ def draw_boxes(detections, image, colors):
                         (xmin, ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         colors[label], 2)
     obj = []
-    for label, confidence, bbox in detections:
+    for num, (label, confidence, bbox) in enumerate(detections):
         x, y, w, h = bbox
         obj.append({'type': label, 'width': w, 'height': h, 'top': y, 'left': x})
     Xray_result = {'rect': obj}
+    # print(Xray_result)
+    return image
 
 
-def XrayAicheck_process(image):
-    darknet_image = darknet.make_image(image.shape[0], image.shape[1], 3)
+def XrayAicheck_process(config, image):
+    darknet_image = darknet.make_image(image.shape[1], image.shape[0], 3)
     darknet.copy_image_from_bytes(darknet_image, image.tobytes())
-    detections1 = darknet.detect_image(network1, class_names1, darknet_image, thresh=0.6)
-    detections2 = darknet.detect_image(network2, class_names2, darknet_image, thresh=0.6)
-    drawboxes(detections1, image, class_colors)
-    drawboxes(detections2, image, class_colors)
-    pass
+    detections1 = darknet.detect_image(config.network1, config.class_names1, darknet_image, thresh=0.2)
+    detections2 = darknet.detect_image(config.network2, config.class_names2, darknet_image, thresh=0.2)
+    image = draw_boxes(config, detections1, image, config.class_colors)
+    image = draw_boxes(config, detections2, image, config.class_colors)
+    return image
 
 
 def take_suitcase(config, cam0, cam1, start_time):
@@ -347,7 +359,8 @@ def take_suitcase(config, cam0, cam1, start_time):
                                     input_target = origin0[0:config.bottom_limit,
                                                    config.video_col - 100:config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
-                                    XrayAicheck_process(res)
+                                    res0 = XrayAicheck_process(config, res0)
+                                    res1 = XrayAicheck_process(config, res1)
 
                         if (loc[0] + input_target.shape[1]) <= config.thr_line:  # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
@@ -364,6 +377,8 @@ def take_suitcase(config, cam0, cam1, start_time):
                                 res0 = origin0[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
                                 res1 = origin1[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
                                 take_picture(res0, res1, config.folder_path)
+                                res0 = XrayAicheck_process(config, res0)
+                                res1 = XrayAicheck_process(config, res1)
                                 input_target = origin0[0:config.bottom_limit, (col - 100):col]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -413,6 +428,8 @@ def take_suitcase(config, cam0, cam1, start_time):
                                     res0 = origin0[0:config.bottom_limit, 0:loc[0]]
                                     res1 = origin1[0:config.bottom_limit, 0:loc[0]]
                                     take_picture(res0, res1, config.folder_path)
+                                    res0 = XrayAicheck_process(config, res0)
+                                    res1 = XrayAicheck_process(config, res1)
                                     input_target = origin0[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -429,6 +446,8 @@ def take_suitcase(config, cam0, cam1, start_time):
                                 res0 = origin0[0:config.bottom_limit, col:loc[0]]
                                 res1 = origin1[0:config.bottom_limit, col:loc[0]]
                                 take_picture(res0, res1, config.folder_path)
+                                res0 = XrayAicheck_process(config, res0)
+                                res1 = XrayAicheck_process(config, res1)
                                 input_target = origin0[0:config.bottom_limit, col:col + 100]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -512,6 +531,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                                     res = origin[0:config.bottom_limit,
                                           (loc[0] + input_target.shape[1]):config.video_col]
                                     take_picture(res, config.folder_path)
+                                    res = XrayAicheck_process(config, res)
                                     input_target = origin[0:config.bottom_limit,
                                                    (config.video_col - 100):config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
@@ -529,6 +549,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                                                    config.LtoR)
                                 res = origin[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
                                 take_picture(res, config.folder_path)
+                                res = XrayAicheck_process(config, res)
                                 input_target = origin[0:config.bottom_limit, (col - 100):col]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -577,6 +598,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                                         print('找到最低點截圖\n')
                                     res = origin[0:config.bottom_limit, 0:loc[0]]
                                     take_picture(res, config.folder_path)
+                                    res = XrayAicheck_process(config, res)
                                     input_target = origin[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -592,6 +614,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                                 col = get_accument(binary, loc[0] - config.min_dist, config.LtoR)
                                 res = origin[0:config.bottom_limit, col:loc[0]]
                                 take_picture(res, config.folder_path)
+                                res = XrayAicheck_process(config, res)
                                 input_target = origin[0:config.bottom_limit, col:col + 100]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 

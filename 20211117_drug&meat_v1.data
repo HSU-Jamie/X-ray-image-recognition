@@ -1,6 +1,6 @@
-classes= 13
-train  = C:\darknet-master\vs2019_x64\Release\data+\mix\train_OptimSimilarSamples.txt
-valid  = C:\darknet-master\vs2019_x64\Release\data+\mix\valid_OptimSimilarSamples.txt
-names = ./20211117_drug&meat_v1.names
+classes = 13
+train  = train.txt
+valid  = test.txt
+names = 20211117_drug&meat_v1.names
 backup = backup_Optimize\
 
