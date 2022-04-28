@@ -1,9 +1,9 @@
 import os
-import pprint
 import time
-import darknet
 import cv2
 import numpy as np
+import darknet
+
 
 
 class Config:
@@ -11,7 +11,8 @@ class Config:
                  thresholdProbClass3=0.1, thresholdProbClass4=0.1, thresholdProbClass5=0.1, thresholdProbClass6=0.1,
                  thresholdProbClass7=0.1, thresholdProbClass8=0.1, thresholdProbClass9=0.1, thresholdProbClass10=0.1,
                  thresholdProbClass11=0.1, thresholdProbClass12=0.1, thresholdProbClass13=0.1, thresholdProbClass14=0.1,
-                 thresholdProb2=0.1, cfg1='', weights1='', names1='', data1='', cfg2='', weights2='', names2='', data2='', testPicture=0,
+                 thresholdProb2=0.1, cfg1='', weights1='', names1='', data1='', cfg2='', weights2='', names2='',
+                 data2='', testPicture=0,
                  testPicture_path='', testPicture_savepath='', debugMode=1, test_Path='', capture0='', capture1='',
                  LtoR=0, bottom_limit=0, thr_line=0, showpic=0, video_col=0, video_row=0, maxVal_thr=0,
                  min_dist=0, capture_min_time=0, folder_path='', duration=60, xraytype=0, frame_width=0,
@@ -193,7 +194,6 @@ class Config:
         self.network2, self.class_names2, _ = darknet.load_network(self.cfg2, self.data2, self.weights2)
 
 
-
 def open_camera(capture0, capture1):  # 讀取鏡頭並回傳給主程式
     if capture0 == '0':
         cam0 = cv2.VideoCapture(0)
@@ -279,7 +279,52 @@ def draw_boxes(config, detections, image, colors):
     return image
 
 
-def XrayAicheck_process(config, image):
+def deep_color_detect(config, image, imagepath):
+    ori = image.copy()
+    morph_size = 6
+    morph_elem = 0
+    operation = 2
+    bin_thr = 60
+    element = cv2.getStructuringElement(morph_elem, (2 * morph_size + 1, 2 * morph_size + 1), (morph_size, morph_size))
+    print('****************  getStructuringElement after\n')
+    gray = cv2.cvtColor(ori, cv2.COLOR_BGR2GRAY)
+    print('****************  cv::cvtColor after\n')
+    _, threshold_img = cv2.threshold(gray, bin_thr, 255, cv2.THRESH_BINARY_INV)
+    print('****************  threshold after\n')
+    dst = cv2.morphologyEx(threshold_img, operation, element)
+    print('****************  morphologyEx after\n')
+    contours, hierarchy = cv2.findContours(dst, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    print('****************  findContours after\n')
+    area = []
+    obj = []
+    for i in contours:
+        area.append(cv2.contourArea(i))
+    largest_area = np.argmax(area)
+    largest_contours = contours[largest_area]
+    if config.debugMode:
+        print('****************  contourArea after\n')
+    if len(largest_contours):
+        x, y, w, h = cv2.boundingRect(largest_contours)
+        cv2.rectangle(ori, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        if largest_area > config.largest_area_thr:
+            obj.append({'type': '13', 'width': w, 'height': h, 'top': y, 'left': x})
+            deepColorResult = {'rect': obj}
+            dst = ori[y:y + h, x:x + w]
+            dst = cv2.cvtColor(dst, cv2.COLOR_BGR2GRAY)
+            dst = cv2.equalizeHist(dst)
+            dst = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
+            ori[y:y + h, x:x + w] = dst
+            cv2.imwrite(imagepath, ori)
+            if config.debugMode:
+                print("deepColorResult:", deepColorResult)
+        else:
+            print("無大面積深色\n")
+    else:
+        print("無大面積深色\n")
+
+
+def XrayAicheck_process(config, image, imagepath):
+    deep_color_detect(config, image, imagepath)
     darknet_image = darknet.make_image(image.shape[1], image.shape[0], 3)
     darknet.copy_image_from_bytes(darknet_image, image.tobytes())
     detections1 = darknet.detect_image(config.network1, config.class_names1, darknet_image, thresh=0.2)
@@ -292,7 +337,9 @@ def XrayAicheck_process(config, image):
 def take_suitcase(config, cam0, cam1, start_time):
     frame_num = 0
     input_target = np.array([])
-
+    imagepath =  time.strftime('%Y%m%d', time.localtime())
+    if not os.path.exists(imagepath):
+        os.mkdir(imagepath)
     if config.xraytype:  # 雙射源
         while True:
             ret0, frame0 = cam0.read()
@@ -359,8 +406,8 @@ def take_suitcase(config, cam0, cam1, start_time):
                                     input_target = origin0[0:config.bottom_limit,
                                                    config.video_col - 100:config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
-                                    res0 = XrayAicheck_process(config, res0)
-                                    res1 = XrayAicheck_process(config, res1)
+                                    res0 = XrayAicheck_process(config, res0, imagepath)
+                                    res1 = XrayAicheck_process(config, res1, imagepath)
 
                         if (loc[0] + input_target.shape[1]) <= config.thr_line:  # 如果有過長的寬度則截圖
                             capture_time = time.time() - start_time
@@ -377,8 +424,8 @@ def take_suitcase(config, cam0, cam1, start_time):
                                 res0 = origin0[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
                                 res1 = origin1[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
                                 take_picture(res0, res1, config.folder_path)
-                                res0 = XrayAicheck_process(config, res0)
-                                res1 = XrayAicheck_process(config, res1)
+                                res0 = XrayAicheck_process(config, res0, imagepath)
+                                res1 = XrayAicheck_process(config, res1, imagepath)
                                 input_target = origin0[0:config.bottom_limit, (col - 100):col]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -428,8 +475,8 @@ def take_suitcase(config, cam0, cam1, start_time):
                                     res0 = origin0[0:config.bottom_limit, 0:loc[0]]
                                     res1 = origin1[0:config.bottom_limit, 0:loc[0]]
                                     take_picture(res0, res1, config.folder_path)
-                                    res0 = XrayAicheck_process(config, res0)
-                                    res1 = XrayAicheck_process(config, res1)
+                                    res0 = XrayAicheck_process(config, res0, imagepath)
+                                    res1 = XrayAicheck_process(config, res1, imagepath)
                                     input_target = origin0[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -446,8 +493,8 @@ def take_suitcase(config, cam0, cam1, start_time):
                                 res0 = origin0[0:config.bottom_limit, col:loc[0]]
                                 res1 = origin1[0:config.bottom_limit, col:loc[0]]
                                 take_picture(res0, res1, config.folder_path)
-                                res0 = XrayAicheck_process(config, res0)
-                                res1 = XrayAicheck_process(config, res1)
+                                res0 = XrayAicheck_process(config, res0, imagepath)
+                                res1 = XrayAicheck_process(config, res1, imagepath)
                                 input_target = origin0[0:config.bottom_limit, col:col + 100]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -531,7 +578,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                                     res = origin[0:config.bottom_limit,
                                           (loc[0] + input_target.shape[1]):config.video_col]
                                     take_picture(res, config.folder_path)
-                                    res = XrayAicheck_process(config, res)
+                                    res = XrayAicheck_process(config, res, imagepath)
                                     input_target = origin[0:config.bottom_limit,
                                                    (config.video_col - 100):config.video_col]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
@@ -549,7 +596,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                                                    config.LtoR)
                                 res = origin[0:config.bottom_limit, loc[0] + input_target.shape[1]:col]
                                 take_picture(res, config.folder_path)
-                                res = XrayAicheck_process(config, res)
+                                res = XrayAicheck_process(config, res, imagepath)
                                 input_target = origin[0:config.bottom_limit, (col - 100):col]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -598,7 +645,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                                         print('找到最低點截圖\n')
                                     res = origin[0:config.bottom_limit, 0:loc[0]]
                                     take_picture(res, config.folder_path)
-                                    res = XrayAicheck_process(config, res)
+                                    res = XrayAicheck_process(config, res, imagepath)
                                     input_target = origin[0:config.bottom_limit, 0:100]
                                     input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
@@ -614,7 +661,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                                 col = get_accument(binary, loc[0] - config.min_dist, config.LtoR)
                                 res = origin[0:config.bottom_limit, col:loc[0]]
                                 take_picture(res, config.folder_path)
-                                res = XrayAicheck_process(config, res)
+                                res = XrayAicheck_process(config, res, imagepath)
                                 input_target = origin[0:config.bottom_limit, col:col + 100]
                                 input_target = cv2.cvtColor(input_target, cv2.COLOR_BGR2GRAY)
 
