@@ -274,8 +274,12 @@ def draw_boxes(config, detections, image, colors):
     for num, (label, confidence, bbox) in enumerate(detections):
         x, y, w, h = bbox
         obj.append({'type': label, 'width': w, 'height': h, 'top': y, 'left': x})
+        checknum = num
     Xray_result = {'rect': obj}
-    # print(Xray_result)
+    if config.debugMode:
+        print('Detect num: ', checknum+1, '\n')
+    print(Xray_result)
+
     return image
 
 
