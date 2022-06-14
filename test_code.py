@@ -1,5 +1,5 @@
-import Function
-import cv2
 
-img = cv2.imread('images.jpg')
-Function.deep_color_detect(123,img)
+
+a = [[123,456,789]]
+b = [[789,456,123],[456,789,123]]
+c = [[789,456,123],[456,789,123]]

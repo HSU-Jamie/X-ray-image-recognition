@@ -216,8 +216,8 @@ def set_window(cam0, cam1, showpic, video_col, video_row):  # 設定視窗大小
     if showpic != 0:
         cv2.namedWindow('frame', cv2.WINDOW_GUI_NORMAL)
         cv2.resizeWindow('frame', video_col // 2, video_row // 2)
-        cv2.namedWindow('bin', cv2.WINDOW_GUI_NORMAL)
-        cv2.resizeWindow('bin', video_col // 2, video_row // 2)
+        # cv2.namedWindow('bin', cv2.WINDOW_GUI_NORMAL)
+        # cv2.resizeWindow('bin', video_col // 2, video_row // 2)
     cam0.set(cv2.CAP_PROP_FRAME_WIDTH, video_col)
     cam0.set(cv2.CAP_PROP_FRAME_HEIGHT, video_row)
     cam1.set(cv2.CAP_PROP_FRAME_WIDTH, video_col)
@@ -271,19 +271,20 @@ def draw_boxes(config, detections, image, colors):
                         (xmin, ymin - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         colors[label], 2)
     obj = []
-    for num, (label, confidence, bbox) in enumerate(detections):
+    for label, confidence, bbox in detections:
         x, y, w, h = bbox
         obj.append({'type': label, 'width': w, 'height': h, 'top': y, 'left': x})
-        checknum = num
+
     Xray_result = {'rect': obj}
     if config.debugMode:
-        print('Detect num: ', checknum+1, '\n')
+        print('Detect num: ', len(detections), '\n')
     print(Xray_result)
 
     return image
 
 
 def deep_color_detect(config, image, imagepath):
+    str_filedate = time.strftime('%Y%m%d%H%M-%S', time.localtime())
     ori = image.copy()
     morph_size = 6
     morph_elem = 0
@@ -303,8 +304,11 @@ def deep_color_detect(config, image, imagepath):
     obj = []
     for i in contours:
         area.append(cv2.contourArea(i))
-    largest_area = np.argmax(area)
-    largest_contours = contours[largest_area]
+    try:
+        largest_area = np.argmax(area)
+        largest_contours = contours[largest_area]
+    except:
+        largest_contours = []
     if config.debugMode:
         print('****************  contourArea after\n')
     if len(largest_contours):
@@ -318,7 +322,7 @@ def deep_color_detect(config, image, imagepath):
             dst = cv2.equalizeHist(dst)
             dst = cv2.cvtColor(dst, cv2.COLOR_GRAY2BGR)
             ori[y:y + h, x:x + w] = dst
-            cv2.imwrite(imagepath, ori)
+            cv2.imwrite(imagepath + '/' + str_filedate + '.jpg', ori)
             if config.debugMode:
                 print("deepColorResult:", deepColorResult)
         else:
@@ -327,12 +331,33 @@ def deep_color_detect(config, image, imagepath):
         print("無大面積深色\n")
 
 
+def cut_obj(detections1, detections2, image):
+    obj = []
+    detections = []
+    if len(detections1) != 0:
+        detections.extend(detections1)
+    elif len(detections2) != 0:
+        detections.extend(detections2)
+    else:
+        return obj
+
+    for label, confidence, bbox in detections:
+        xmin, ymin, xmax, ymax = darknet.bbox2points(bbox)
+        img = np.array(image[ymin:ymax, xmin:xmax])
+        obj.append(img)
+        return obj
+
 def XrayAicheck_process(config, image, imagepath):
     deep_color_detect(config, image, imagepath)
     darknet_image = darknet.make_image(image.shape[1], image.shape[0], 3)
     darknet.copy_image_from_bytes(darknet_image, image.tobytes())
     detections1 = darknet.detect_image(config.network1, config.class_names1, darknet_image, thresh=0.2)
     detections2 = darknet.detect_image(config.network2, config.class_names2, darknet_image, thresh=0.2)
+    obj = cut_obj(detections1, detections2, image)
+    # resize obj shape
+    # model prediction
+    # drop detections
+    # draw boxes
     image = draw_boxes(config, detections1, image, config.class_colors)
     image = draw_boxes(config, detections2, image, config.class_colors)
     return image
@@ -513,7 +538,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                 if config.showpic:
                     cv2.imshow('res', res0)
                     cv2.imshow('frame', frame0)
-                    cv2.imshow('bin', binary)
+                    # cv2.imshow('bin', binary)
                     cv2.waitKey(1)
 
             elif (frame_num % config.duration) == (config.duration - 1):
@@ -680,7 +705,7 @@ def take_suitcase(config, cam0, cam1, start_time):
                 if config.showpic:
                     cv2.imshow('res', res)
                     cv2.imshow('frame', frame)
-                    cv2.imshow('bin', binary)
+                    # cv2.imshow('bin', binary)
                     cv2.waitKey(1)
 
             elif (frame_num % config.duration) == (config.duration - 1):
