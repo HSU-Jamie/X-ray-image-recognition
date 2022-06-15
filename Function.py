@@ -3,8 +3,11 @@ import time
 import cv2
 import numpy as np
 import darknet
+import tensorflow as tf
+from tensorflow.keras.models import load_model
 
-
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# tf.config.experimental.set_memory_growth(gpus[0], True)
 
 class Config:
     def __init__(self, largest_area_thr=50000, thresholdProb=0.1, thresholdProbClass1=0.1, thresholdProbClass2=0.1,
@@ -17,7 +20,7 @@ class Config:
                  LtoR=0, bottom_limit=0, thr_line=0, showpic=0, video_col=0, video_row=0, maxVal_thr=0,
                  min_dist=0, capture_min_time=0, folder_path='', duration=60, xraytype=0, frame_width=0,
                  frame_height=0, frame_coordinate_x=0, frame_coordinate_y=0, inputtarget_width=0, acc_thr=0,
-                 error_template_times=0):  # 宣告的config相對應的變數
+                 error_template_times=0, efn_weights=''):  # 宣告的config相對應的變數
         # [Main]
         self.largest_area_thr = largest_area_thr
         self.thresholdProb = thresholdProb
@@ -78,7 +81,8 @@ class Config:
         self.network2 = None
         self.class_names2 = None
         self.class_colors = None
-
+        self.efn_weights = efn_weights
+        self.network3 = None
     def load_config(self, path):  # 將config檔案讀取並放到相對應的變數
         try:
             with open(path, 'r', encoding='utf-8') as f:
@@ -186,12 +190,15 @@ class Config:
                         self.acc_thr = eval(temp[1])
                     elif temp[0].find('error_template_times') != -1:
                         self.error_template_times = eval(temp[1])
+                    elif temp[0].find('efn_weights') != -1:
+                        self.efn_weights = temp[1]
         except:
             print('load config error')  # 讀取失敗
 
     def load_model(self):
         self.network1, self.class_names1, self.class_colors = darknet.load_network(self.cfg1, self.data1, self.weights1)
         self.network2, self.class_names2, _ = darknet.load_network(self.cfg2, self.data2, self.weights2)
+        self.network3 = load_model(self.efn_weights)
 
 
 def open_camera(capture0, capture1):  # 讀取鏡頭並回傳給主程式
@@ -331,7 +338,7 @@ def deep_color_detect(config, image, imagepath):
         print("無大面積深色\n")
 
 
-def cut_obj(detections1, detections2, image):
+def cut_obj(detections1, detections2, image, imgsz):
     obj = []
     detections = []
     if len(detections1) != 0:
@@ -339,13 +346,14 @@ def cut_obj(detections1, detections2, image):
     elif len(detections2) != 0:
         detections.extend(detections2)
     else:
-        return obj
+        return np.array(obj), detections
 
     for label, confidence, bbox in detections:
         xmin, ymin, xmax, ymax = darknet.bbox2points(bbox)
         img = np.array(image[ymin:ymax, xmin:xmax])
+        img = cv2.resize(img, (imgsz, imgsz), interpolation=cv2.INTER_LINEAR)
         obj.append(img)
-        return obj
+    return np.array(obj), detections
 
 def XrayAicheck_process(config, image, imagepath):
     deep_color_detect(config, image, imagepath)
@@ -353,10 +361,11 @@ def XrayAicheck_process(config, image, imagepath):
     darknet.copy_image_from_bytes(darknet_image, image.tobytes())
     detections1 = darknet.detect_image(config.network1, config.class_names1, darknet_image, thresh=0.2)
     detections2 = darknet.detect_image(config.network2, config.class_names2, darknet_image, thresh=0.2)
-    obj = cut_obj(detections1, detections2, image)
-    # resize obj shape
+    obj, detections = cut_obj(detections1, detections2, image, imgsz=224)
     # model prediction
+    pred = config.network3(obj)
     # drop detections
+    drop_index = [np.argmax(i) for i in pred]
     # draw boxes
     image = draw_boxes(config, detections1, image, config.class_colors)
     image = draw_boxes(config, detections2, image, config.class_colors)

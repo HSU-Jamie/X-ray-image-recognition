@@ -1,5 +1,5 @@
-
-
-a = [[123,456,789]]
-b = [[789,456,123],[456,789,123]]
-c = [[789,456,123],[456,789,123]]
+import tensorflow as tf
+from tensorflow.keras.models import load_model
+import cv2
+import numpy as np
+model = load_model('effnet_modelB3.h5')
